@@ -14,6 +14,7 @@ void getSignalData(map<string,string>);
 string getData(string, bool, int);
 string dta[100];
 stringstream JSON;
+vector< map<string,int> > EventInput;
 
 int xorr(vector<int> op)
 {
@@ -137,7 +138,6 @@ namespace vp {
 
 	};
 }
-
 
 
 void printLn();
@@ -275,4 +275,34 @@ void getSignalData(map<string, string> map1)
 		
 	}
 
+}
+
+void timeline()
+{
+	freopen("Test.txt", "r", stdin); 
+	string temp;
+	int currentT = 0;
+	EventInput.resize(100);
+
+	while(cin >> temp)
+	{
+		if(temp.find("#") == 0)
+		{
+			temp = temp.substr(1, temp.size());
+			currentT += stoi(temp);
+			cout << currentT;
+		}
+		else
+		{
+			int loc = temp.find("=");
+			string tempV = temp.substr(loc+1, temp.size());
+			temp = temp.substr(0, loc);
+			EventInput[currentT][temp] = stoi(tempV);
+		}
+
+	}
+
+	EventInput;
+	system("pause");
+	
 }
