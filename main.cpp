@@ -11,14 +11,16 @@ using namespace vp;
 
 void JSONwave(map<string, string>, map<string, string>);
 void getSignalData(map<string,string>);
+void BuildTimeline(new_circuit& x);
 string getData(string, bool, int);
 string dta[100];
 stringstream JSON;
-vector< map<string,int> > EventInput;
+vector< map<string,int> > EventInput, EventOutput;
+stringstream JSON;
 
 int xorr(vector<int> op)
 {
-	int x = 0;
+	int x=0;
 	for (int i = 0;i < op.size();i++)
 		x ^= op[i];
 	return x;
@@ -57,8 +59,11 @@ int buff(vector<int> op)
 {
 	return op[0];
 }
-namespace vp {
-	class mynode :protected Node {
+namespace vp{
+	class new_circuit;
+	class mynode;
+	
+	class mynode :public Node {
 	private:
 		bool ready;
 		int value;
@@ -86,24 +91,10 @@ namespace vp {
 			else if (type == "buf")
 				func = buff;
 			else
-				throw exception("not supported gate");
+				cout << type << endl;
 
 		};
-		void begin(new_circuit &x) {
-			for (int i = 0;i < this->getInputsCount();i++)
-			{
-				mynode &n = (x.new_node(x.getNodeIndex(inputNode(i).getName())));
-				if (!n.is_ready())
-					n.begin(x);
-				op.push_back(n.get_value());
-				new_tfall = max(new_tfall, n.new_tfall);
-				new_trise = max(new_trise, n.new_trise);
-			}
-			new_tfall += tFall;
-			new_trise += tRise;
-			value = func(op);
-			ready = true;
-		}
+		void begin(new_circuit &x); 
 		bool is_ready() const {
 			return ready;
 		}
@@ -118,8 +109,6 @@ namespace vp {
 				return false;
 		}
 	};
-}
-namespace vp {
 	class new_circuit :public Circuit
 	{
 		vector<mynode> new_nodes;
@@ -132,27 +121,64 @@ namespace vp {
 				new_nodes.push_back(n);
 			}
 		}
+		mynode& outputnode(int index)
+		{
+			return new_nodes[outputNodes[index]];
+		}
 		mynode& new_node(size_t index) {
+			return new_nodes[index];
+		}
+		mynode& new_node(string name) {
+			int index = getNodeIndex(name);
 			return new_nodes[index];
 		}
 
 	};
+	void mynode::begin(new_circuit &x){
+		for (int i = 0;i < this->getInputsCount();i++)
+		{
+			mynode &n = (x.new_node(x.getNodeIndex(inputNode(i).getName())));
+			if (!n.is_ready())
+				n.begin(x);
+			op.push_back(n.get_value());
+			new_tfall = max(new_tfall, n.new_tfall);
+			new_trise = max(new_trise, n.new_trise);
+		}
+		new_tfall += tFall;
+		new_trise += tRise;
+		value = func(op);
+		ready = true;
+	}
 }
+void timeline(new_circuit& x)
+{
+	EventOutput.resize(EventInput.size() * 2);
+	for (int i = 0;i < EventInput.size();i++)
+	{
+		if (EventInput[i].size() != 0)
+		{
+			for (map<string, int>::iterator it = EventInput[i].begin();it != EventInput[i].end(); it++)
+				x.new_node(it->first).set_value(it->second);
+			for (int j = 0;j < x.getOutputNodesCount();j++)
+			{
+				x.outputnode(j).begin(x);
+				//if(x.outputNode(j).)
+			}
 
+		}
+	}
 
-void printLn();
-void BuildTimeline(new_circuit& x);
-
+}
 int main() {
-
+	
 	try {
-
+		
 		// Initialize Circuit
 		Circuit circuit;
 		circuit.parseFile("FullAdder2.v");
 		circuit.parseDelaysFile("gateDelays.delay");
-		new_circuit operating(circuit);
-
+		new_circuit operating(circuit);	
+		
 	}
 	catch (ParseError& e) {
 		cout << "ParseError: " << e.what() << endl;
@@ -168,7 +194,6 @@ int main() {
 #endif
 	return 0;
 }
-
 
 void BuildTimeline(new_circuit &x)
 {
