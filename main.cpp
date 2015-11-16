@@ -8,11 +8,13 @@
 
 using namespace std;
 using namespace vp;
+
 void JSONwave(map<string, string>, map<string, string>);
-void getSignalData(map<string, string>);
+void getSignalData(map<string,string>);
 string getData(string, bool, int);
 string dta[100];
 stringstream JSON;
+
 int xorr(vector<int> op)
 {
 	int x = 0;
@@ -174,9 +176,9 @@ void JSONwave(map<string, string> input, map<string, string> output)
 	JSON << "\tsignal: [\n";	//Beggining of signal code
 
 
-								//Getting input Signals
+	//Getting input Signals
 	getSignalData(input);
-
+	
 	JSON << "\t\t{},\n";
 
 	//Getting output Signals
@@ -187,7 +189,7 @@ void JSONwave(map<string, string> input, map<string, string> output)
 	waveFinal = JSON.str();	//Copying info from stream.
 	cout << waveFinal;	//Outputting wavedrom code
 	system("pause");
-
+	
 }
 
 //Reformats the data to wavedrom format
@@ -197,10 +199,10 @@ string getData(string data, bool type, int count)
 	stringstream temp;
 
 
-	temp << "data: (";
+	temp << "data: [";
 
 	//Looping and reformatting.
-	if (!type)
+	if(!type)
 		for (int i = 1; i < data.size(); i++)
 		{
 			if (data[i] == last) data[i] = '.';
@@ -208,7 +210,7 @@ string getData(string data, bool type, int count)
 		}
 	else
 	{
-
+		
 		for (int i = 0; i < dta[0].size(); i++)
 		{
 			string out;
@@ -218,7 +220,7 @@ string getData(string data, bool type, int count)
 			temp << "'" << out << "',";
 		}
 
-		temp << ")";
+		temp << "]";
 		JSON << temp.str();
 
 	}
@@ -240,7 +242,7 @@ void getSignalData(map<string, string> map1)
 
 			JSON << "\t\t{name: '" << name << "', wave: '";
 
-			for (int i = 0; i < it->second.size(); i++)
+			for ( int i =0; i < it->second.size(); i++)
 				JSON << "=";
 
 			JSON << "', ";
@@ -259,18 +261,18 @@ void getSignalData(map<string, string> map1)
 				}
 			}
 
-			while ((Tcount--) - count) it--;
+			while((Tcount--)-count) it--;
 
 			getData(it->second, 1, count);
 			JSON << "},\n";
-
+			
 		}
 		else
 		{
-			JSON << "\t\t{name: '" << it->first << "', wave: '" << getData(it->second, 0, 0) << "'}\n";
+			 JSON << "\t\t{name: '" << it->first << "', wave: '" << getData(it->second, 0, 0) << "'},\n";
 		}
 
-
+		
 	}
 
 }
