@@ -6,15 +6,13 @@
 #include "Circuit.h"
 #include "ParseError.h"
 
+#define _CRT_SECURE_NO_WARNINGS
+
 using namespace std;
 using namespace vp;
 
-void JSONwave(map<string, string>, map<string, string>);
-void getSignalData(map<string,string>);
-void BuildTimeline(new_circuit& x);
 string getData(string, bool, int);
 string dta[100];
-stringstream JSON;
 vector< map<string,int> > EventInput, EventOutput;
 stringstream JSON;
 
@@ -169,8 +167,14 @@ void timeline(new_circuit& x)
 	}
 
 }
+
+void JSONwave(map<string, string>, map<string, string>);
+void getSignalData(map<string,string>);
+void BuildTimeline(new_circuit& x);
+
+
 int main() {
-	
+
 	try {
 		
 		// Initialize Circuit
@@ -178,6 +182,8 @@ int main() {
 		circuit.parseFile("FullAdder2.v");
 		circuit.parseDelaysFile("gateDelays.delay");
 		new_circuit operating(circuit);	
+		BuildTimeline(operating);
+
 		
 	}
 	catch (ParseError& e) {
@@ -235,7 +241,6 @@ void BuildTimeline(new_circuit &x)
 	system("pause");
 	
 }
-
 
 void JSONwave(map<string, string> input, map<string, string> output)
 {
