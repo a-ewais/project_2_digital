@@ -120,7 +120,7 @@ namespace vp {
 	};
 }
 namespace vp {
-	class new_circuit :protected Circuit
+	class new_circuit :public Circuit
 	{
 		vector<mynode> new_nodes;
 
@@ -141,6 +141,7 @@ namespace vp {
 
 
 void printLn();
+void BuildTimeline(new_circuit& x);
 
 int main() {
 
@@ -168,6 +169,49 @@ int main() {
 	return 0;
 }
 
+
+void BuildTimeline(new_circuit &x)
+{
+	freopen("Test2.txt", "r", stdin); 
+	string temp;
+	int currentT = 0;
+	EventInput.resize(100);
+	bool flag = true;
+
+	while(cin >> temp)
+	{
+		if(temp.find("#") == 0)
+		{
+			if(flag)
+				{
+					for ( int i =0; i < x.getInputNodesCount(); i++)
+						if(EventInput[0].find(x.inputNode(i).getName())==EventInput[0].end())
+							EventInput[0][x.inputNode(i).getName()] = 3;
+
+					flag = false;
+				}
+
+
+			temp = temp.substr(1, temp.size());
+			currentT += stoi(temp);
+			cout << currentT;
+		}
+		else
+		{
+			int loc = temp.find("=");
+			string tempV = temp.substr(loc+1, temp.size());
+			temp = temp.substr(0, loc);
+			EventInput[currentT][temp] = stoi(tempV);
+		}
+
+	}
+
+	EventInput;
+	system("pause");
+	
+}
+
+
 void JSONwave(map<string, string> input, map<string, string> output)
 {
 	string waveFinal;
@@ -175,6 +219,11 @@ void JSONwave(map<string, string> input, map<string, string> output)
 	JSON << "{\n\tconfig: {hscale:4, skin:'narrow'},\n\thead:{text:'Circuit 1', tick: 0,},\n";	//Initial Diagram configs
 	JSON << "\tsignal: [\n";	//Beggining of signal code
 
+	//Formatting input to X's and Z's
+	for (auto it = input.begin(); it != input.end(); ++it)
+		for ( int j =0; j < it->second.size(); j++)
+			if ( it->second[j] == '2') it->second[j] = 'Z';
+			else if(it->second[j] == '3') it->second[j] = 'X';
 
 	//Getting input Signals
 	getSignalData(input);
@@ -275,34 +324,4 @@ void getSignalData(map<string, string> map1)
 		
 	}
 
-}
-
-void timeline()
-{
-	freopen("Test.txt", "r", stdin); 
-	string temp;
-	int currentT = 0;
-	EventInput.resize(100);
-
-	while(cin >> temp)
-	{
-		if(temp.find("#") == 0)
-		{
-			temp = temp.substr(1, temp.size());
-			currentT += stoi(temp);
-			cout << currentT;
-		}
-		else
-		{
-			int loc = temp.find("=");
-			string tempV = temp.substr(loc+1, temp.size());
-			temp = temp.substr(0, loc);
-			EventInput[currentT][temp] = stoi(tempV);
-		}
-
-	}
-
-	EventInput;
-	system("pause");
-	
 }
