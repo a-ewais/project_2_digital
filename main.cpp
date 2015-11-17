@@ -5,7 +5,6 @@
 #include<map>
 #include "Circuit.h"
 #include "ParseError.h"
-
 #define _CRT_SECURE_NO_WARNINGS
 
 using namespace std;
@@ -204,10 +203,11 @@ int main() {
 void BuildTimeline(new_circuit &x)
 {
 	freopen("Test2.txt", "r", stdin); 
-	string temp;
-	int currentT = 0;
+	string temp, name;
+	int currentT = 0, size, Tcount= 0;
 	EventInput.resize(100);
 	bool flag = true;
+	map<string, int> busMap;
 
 	while(cin >> temp)
 	{
@@ -217,7 +217,12 @@ void BuildTimeline(new_circuit &x)
 				{
 					for ( int i =0; i < x.getInputNodesCount(); i++)
 						if(EventInput[0].find(x.inputNode(i).getName())==EventInput[0].end())
+						{
 							EventInput[0][x.inputNode(i).getName()] = 3;
+
+							if(x.inputNode(i).getName().find("[") > 0 && x.inputNode(i).getName().find("[") < x.inputNode(i).getName().size())
+								busMap[x.inputNode(i).getName()] = -1;
+						}
 
 					flag = false;
 				}
@@ -229,10 +234,28 @@ void BuildTimeline(new_circuit &x)
 		}
 		else
 		{
-			int loc = temp.find("=");
+			int loc = temp.find("="), count = 0;
 			string tempV = temp.substr(loc+1, temp.size());
 			temp = temp.substr(0, loc);
-			EventInput[currentT][temp] = stoi(tempV);
+			bool Bus = false;
+			
+			for ( int i =0 ; i < 1e9; i++)
+			{
+				string tempBus = temp + "[" + to_string(i) + "]";
+				map<string, int>::iterator it = busMap.find(tempBus);
+
+				if(it != busMap.end())
+					{
+						int tempValue = stoi(tempV) & ( 1 << i);
+						EventInput[currentT][tempBus] = tempValue >> i;
+						Bus = 1;
+					}
+				else
+					break;
+			}
+
+			if(!Bus)
+				EventInput[currentT][temp] = stoi(tempV); //MAIN FUNCTIONAL
 		}
 
 	}
