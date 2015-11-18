@@ -19,21 +19,19 @@ module add2(x, y, ci, s, co);
   output [1:0] s;
   input [1:0] x;
   input [1:0] y;
-  and #(1,8) a1 (w11, x[0],y[0]);
+  and a1 (w11, x[0],y[0]);
   nor nr1 (w12, x[0],y[0]);
   nor nr2 (w0, w12, w11);
-  xor xr1 ( w2, ci, w0 );
+  xor xr1 ( s[0], ci, w0 );
   nand nd1 ( w1, x[1], y[1] );
   or o1 ( w3, x[1], y[1]);
   nand nd2 (w4, w1, w3);
   inv in1 (w6, w11);
   nand nd3 (w8, ci, w0);
   nand nd4 ( w9, w6, w8);
-  xnor xnr1 ( w5, w9, w4);
+  xnor xnr1 ( s[1], w9, w4);
   nand ( w10, w3, w9);
-  nand nd6 (w7, w1, w10 );
-  buf b1 ( co, w7);
-  buf b2 ( s[0], w2);
-  buf b3 ( s[1], w5);
+  nand nd6 (co, w1, w10 );
+  
 
 endmodule

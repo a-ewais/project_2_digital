@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include<vector>
 #include <string>
@@ -5,14 +6,13 @@
 #include<map>
 #include "Circuit.h"
 #include "ParseError.h"
-
 using namespace std;
 using namespace vp;
-void JSONwave(map<string, string>, map<string, string>);
-void getSignalData(map<string, string>);
 string getData(string, bool, int);
 string dta[100];
+vector< map<string, int> > EventInput, EventOutput;
 stringstream JSON;
+map<string, string> out, in;
 int xorr(vector<int> op)
 {
 	int x = 0;
@@ -55,18 +55,17 @@ int buff(vector<int> op)
 	return op[0];
 }
 namespace vp {
-	class mynode :protected Node {
+	class new_circuit;
+	class mynode;
+
+	class mynode :public Node {
 	private:
-		bool ready;
 		int value;
 		int(*func)(vector<int> operands);
 		vector<int> op;
-		int new_tfall, new_trise;
 	public:
-		mynode(const Node& x) :Node(x), ready(false), value(0), new_tfall(0), new_trise(0) {
-			if (this->isInputPort())
-				ready = true;
-			else if (type == "xor")
+		mynode(const Node& x) :Node(x),value(3){
+			 if (type == "xor")
 				func = xorr;
 			else if (type == "or")
 				func = orr;
@@ -83,27 +82,9 @@ namespace vp {
 			else if (type == "buf")
 				func = buff;
 			else
-				throw exception("not supported gate");
-
+				func=NULL;
 		};
-		void begin(new_circuit &x) {
-			for (int i = 0;i < this->getInputsCount();i++)
-			{
-				mynode &n = (x.new_node(x.getNodeIndex(inputNode(i).getName())));
-				if (!n.is_ready())
-					n.begin(x);
-				op.push_back(n.get_value());
-				new_tfall = max(new_tfall, n.new_tfall);
-				new_trise = max(new_trise, n.new_trise);
-			}
-			new_tfall += tFall;
-			new_trise += tRise;
-			value = func(op);
-			ready = true;
-		}
-		bool is_ready() const {
-			return ready;
-		}
+		int begin(new_circuit &x);
 		int get_value() { return value; }
 		bool set_value(int x) {
 			if (isInputPort())
@@ -115,9 +96,7 @@ namespace vp {
 				return false;
 		}
 	};
-}
-namespace vp {
-	class new_circuit :protected Circuit
+	class new_circuit :public Circuit
 	{
 		vector<mynode> new_nodes;
 
@@ -129,27 +108,121 @@ namespace vp {
 				new_nodes.push_back(n);
 			}
 		}
+		mynode& outputnode(int index)
+		{
+			return new_nodes[outputNodes[index]];
+		}
 		mynode& new_node(size_t index) {
+			return new_nodes[index];
+		}
+		mynode& new_node(string name) {
+			int index = getNodeIndex(name);
 			return new_nodes[index];
 		}
 
 	};
+	int mynode::begin(new_circuit &x) {
+		int temp;
+		for (int i = 0;i < getInputsCount();i++)
+		{
+			mynode &n = (x.new_node(x.getNodeIndex(inputNode(i).getName())));
+			temp = n.get_value();
+			if(temp<2)
+				op.push_back(temp);
+			else {
+				value = temp;
+				op.clear();
+				return value;
+			}
+	
+		}
+		if (isOutputPort())
+		{
+			if (op.size() == 1)
+				value = op[0];
+			else
+				value = 2;
+		}
+		else if(!isInputPort())
+			value = func(op);
+		op.clear();
+		return value;
+	}
 }
+void timeline(new_circuit& x)
+{
+	auto eventinput(EventInput);
+	EventOutput.resize(eventinput.size()+ 2);	
+	for (int i = 0;i < eventinput.size();i++)
+	{
+		if (eventinput[i].size() != 0)
+		{
+			for (map<string, int>::iterator it = eventinput[i].begin();it != eventinput[i].end(); it++)
+			{
+				x.new_node(it->first).set_value(it->second);
+				for (int j = 0;j < x.getNodesCount();j++)
+				{
+					
+					if (x[x.getNodeIndex(it->first)][j])
+					{
+						eventinput[i + x.new_node(j).getTRise()][x.new_node(j).getName()] = x.new_node(j).begin(x);
+						if (x.new_node(j).isOutputPort())
+						{							
+							EventOutput[i + x.new_node(j).getTRise()][x.new_node(j).getName()] = x.new_node(j).get_value();
+						}
+					}
+				}
+			}
+		}		
+	}
+}	 //tested
+void fill_input(new_circuit& operating)
+		{
+			map<string, int> x(EventInput[0]);
+			for (int i = 0;i < EventInput.size();i++)
+			{
+				if (EventInput[i].size() != EventInput[0].size())
+				{
+					for (map<string, int> ::iterator it = EventInput[i].begin();it != EventInput[i].end();it++)
+						x[it->first] = it->second;
 
-
-
-void printLn();
-
+					EventInput[i] = x;
+				}
+				else
+					x = EventInput[i];
+			}
+			map<string, int> y;
+			for (int i = 0;i < operating.getOutputNodesCount();i++)
+				y[operating.outputNode(i).getName()] = 3;
+			for (int i = 0;i < EventOutput.size();i++)
+			{
+				if (EventOutput[i].size() != 0)
+					for (map<string, int> ::iterator it = EventOutput[i].begin();it != EventOutput[i].end();it++)
+						y[it->first] = it->second;
+				else
+					EventOutput[i] = y;
+			}
+		}
+void JSONwave();
+void getSignalData(map<string, string>);
+void BuildTimeline(new_circuit& x);
+void convert_in();
+void convert_out();
 int main() {
 
 	try {
-
 		// Initialize Circuit
 		Circuit circuit;
 		circuit.parseFile("FullAdder2.v");
 		circuit.parseDelaysFile("gateDelays.delay");
-		new_circuit operating(circuit);
-
+		new_circuit operating(circuit);		
+		BuildTimeline(operating);
+		timeline(operating);
+		fill_input(operating);
+		convert_in();
+		convert_out();
+		JSONwave();
+		
 	}
 	catch (ParseError& e) {
 		cout << "ParseError: " << e.what() << endl;
@@ -157,35 +230,122 @@ int main() {
 	catch (exception& e) {
 		cout << e.what() << endl;
 	}
-
-	cout << endl << endl;
-
+	
 #ifdef _WIN32
 	system("pause");
 #endif
 	return 0;
 }
 
-void JSONwave(map<string, string> input, map<string, string> output)
+void BuildTimeline(new_circuit &x)
 {
+	freopen("Test.txt", "r", stdin);
+	string temp, name;
+	int currentT = 0, size, Tcount = 0;
+	EventInput.resize(100);
+	bool flag = true;
+	map<string, int> busMap;
+
+	for (int i = 0; i < x.getInputNodesCount(); i++)
+		if (x.inputNode(i).getName().find("[") != -1)
+			busMap[x.inputNode(i).getName()] = -1;
+
+	while (getline(cin, temp))
+	{
+		if (temp.find("#") == 0)
+		{
+			if (flag)
+			{
+				for (int i = 0; i < x.getInputNodesCount(); i++)
+					if (EventInput[0].find(x.inputNode(i).getName()) == EventInput[0].end())
+						EventInput[0][x.inputNode(i).getName()] = 3;
+
+				flag = false;
+			}
+
+
+			temp = temp.substr(1, temp.size());
+			currentT += stoi(temp);
+		}
+		else
+		{
+			while (temp.find(" ") != -1)
+			{
+				int start = temp.find(" ");
+				temp.erase(start, 1);
+			}
+
+			int loc = temp.find("="), count = 0;
+			string tempV = temp.substr(loc + 1, temp.size());
+			temp = temp.substr(0, loc);
+			bool Bus = false;
+
+			for (int i = 0; i < 1e9; i++)
+			{
+				string tempBus = temp + "[" + to_string(i) + "]";
+				map<string, int>::iterator it = busMap.find(tempBus);
+
+				if (it != busMap.end())
+				{
+					int tempValue = stoi(tempV) & (1 << i);
+					EventInput[currentT][tempBus] = tempValue >> i;
+					Bus = 1;
+				}
+				else
+					break;
+			}
+
+			if (!Bus)
+				EventInput[currentT][temp] = stoi(tempV); //MAIN FUNCTIONAL
+		}
+
+	}
+
+	EventInput;
+	system("pause");
+
+}
+
+void JSONwave()
+{
+
 	string waveFinal;
 
 	JSON << "{\n\tconfig: {hscale:4, skin:'narrow'},\n\thead:{text:'Circuit 1', tick: 0,},\n";	//Initial Diagram configs
 	JSON << "\tsignal: [\n";	//Beggining of signal code
 
+								//Formatting input to X's and Z's
+	for (auto it = in.begin(); it != in.end(); ++it)
+	{
+		for (int j = 0; j < it->second.size(); j++)
+		{
+			if (it->second[j] == '2') it->second[j] = 'z';
+			else if (it->second[j] == '3') it->second[j] = 'x';
+		}
+	}
 
-								//Getting input Signals
-	getSignalData(input);
+	for (auto it = out.begin(); it != out.end(); ++it)
+	{
+		for (int j = 0; j < it->second.size(); j++)
+		{
+			if (it->second[j] == '2') it->second[j] = 'z';
+			else if (it->second[j] == '3') it->second[j] = 'x';
+		}
+	}
+	//Getting input Signals
+	getSignalData(in);
 
 	JSON << "\t\t{},\n";
 
 	//Getting output Signals
-	getSignalData(output);
+	getSignalData(out);
 
 	JSON << "\t\t]\n}\n";			//END of signal code & wave
 
 	waveFinal = JSON.str();	//Copying info from stream.
+	freopen("Output.txt", "w", stdout);
 	cout << waveFinal;	//Outputting wavedrom code
+	fclose(stdout);
 	system("pause");
 
 }
@@ -197,7 +357,7 @@ string getData(string data, bool type, int count)
 	stringstream temp;
 
 
-	temp << "data: (";
+	temp << "data: [";
 
 	//Looping and reformatting.
 	if (!type)
@@ -218,14 +378,13 @@ string getData(string data, bool type, int count)
 			temp << "'" << out << "',";
 		}
 
-		temp << ")";
+		temp << "]";
 		JSON << temp.str();
 
 	}
 
 	return data;
 }
-
 void getSignalData(map<string, string> map1)
 {
 	for (auto it = map1.begin(); it != map1.end(); ++it)
@@ -247,7 +406,8 @@ void getSignalData(map<string, string> map1)
 
 			for (int i = 1; i < map1.size() && it != map1.end(); i++)
 			{
-				it++;
+				if (++it == map1.end()) { it--; break; }
+
 				int subset = it->first.find('[');
 				string sub = it->first.substr(0, subset);
 				Tcount++;
@@ -267,10 +427,29 @@ void getSignalData(map<string, string> map1)
 		}
 		else
 		{
-			JSON << "\t\t{name: '" << it->first << "', wave: '" << getData(it->second, 0, 0) << "'}\n";
+			JSON << "\t\t{name: '" << it->first << "', wave: '" << getData(it->second, 0, 0) << "'},\n";
 		}
 
 
 	}
 
+}
+void convert_in()
+{	for (int i = 0; i < EventInput.size(); i++)
+	{
+		for (auto it = EventInput[i].begin(); it != EventInput[i].end(); ++it)
+		{
+			in[it->first] = in[it->first] + to_string(it->second);
+		}
+	}
+}
+void convert_out()
+{
+	for (int i = 0; i < EventOutput.size(); i++)
+	{
+		for (auto it = EventOutput[i].begin(); it != EventOutput[i].end(); ++it)
+		{
+			out[it->first] = out[it->first] + to_string(it->second);
+		}
+	}
 }
