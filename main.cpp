@@ -196,9 +196,12 @@ void fill_input(new_circuit& operating)
 		y[operating.outputNode(i).getName()] = 3;
 	for (int i = 0;i < EventOutput.size();i++)
 	{
-		if (EventOutput[i].size() != 0)
+		if (EventOutput[i].size() != y.size())
+		{
 			for (map<string, int> ::iterator it = EventOutput[i].begin();it != EventOutput[i].end();it++)
 				y[it->first] = it->second;
+			EventOutput[i] = y;
+		}
 		else
 			EventOutput[i] = y;
 	}
@@ -311,7 +314,7 @@ void JSONwave()
 
 	string waveFinal;
 
-	JSON << "{\n\tconfig: {hscale:4, skin:'narrow'},\n\thead:{text:'Circuit 1', tick: 0,},\n";	//Initial Diagram configs
+	JSON << "{\n\tconfig: {hscale:2, skin:'narrow'},\n\thead:{text:'Circuit 1', tick: 0,},\n";	//Initial Diagram configs
 	JSON << "\tsignal: [\n";	//Beggining of signal code
 
 								//Formatting input to X's and Z's
