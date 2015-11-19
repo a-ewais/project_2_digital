@@ -203,7 +203,7 @@ void fill_input(new_circuit& operating)
 			EventOutput[i] = y;
 		}
 		else
-			EventOutput[i] = y;
+			y=EventOutput[i];
 	}
 }
 void JSONwave();
